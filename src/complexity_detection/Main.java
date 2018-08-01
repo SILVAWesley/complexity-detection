@@ -18,7 +18,7 @@ public class Main {
 	public static void main(String[] args) {
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 		
-		Mat color = Imgcodecs.imread("./images/flower.jpg");
+		Mat color = Imgcodecs.imread("./images/complexas/06NC3J6.jpg");
 		System.out.println(color);
 		
 		Mat gray = new Mat();
@@ -33,12 +33,10 @@ public class Main {
 		
 		wide.convertTo(draw, CvType.CV_8U);
 		
-		if (Imgcodecs.imwrite("C:\\Users\\Wesley Silva\\git\\complexity-detection\\images\\black-background2.jpg", draw)) {
+		if (Imgcodecs.imwrite("C:\\Users\\Wesley Silva\\git\\complexity-detection\\images\\complexas\\06NC3J622222.jpg", draw)) {
 			
 			System.out.println("edge is detected...");
 		}
-		
-		Imgcodecs.imwrite("C:\\Users\\Wesley Silva\\git\\complexity-detection\\images\\black-background3.jpg", newImg);
 		
 		List<MatOfPoint> contours = new ArrayList<>();
 		Imgproc.findContours(draw, contours, new Mat(), Imgproc.RETR_TREE, Imgproc.CHAIN_APPROX_SIMPLE);
@@ -60,7 +58,6 @@ public class Main {
 				  {
 				     int pixelVal = 0;
 				     for(int j=0; j<nbChannels; j++) {
-				    	System.out.println(temp[i*nbChannels+j] << (8*j));
 				        pixelVal+= (temp[i*nbChannels+j] << (8*j));
 				     }
 				     set.add(pixelVal);
