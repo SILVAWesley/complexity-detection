@@ -1,0 +1,103 @@
+---
+title: "visao"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(here)
+library(viridis)
+
+library(broom)
+library(modelr)
+library(DT)
+library(plotly)
+library(arm)
+
+data = read_csv(here("data/data.csv"));
+```
+
+```{r}
+
+data_simples = data %>% filter(rotulo == "simples");
+
+data_simples %>% 
+    ggplot(aes(x = entropia))  + 
+    labs(x = "Entropia de Shannon", y = "Frequência") +
+    geom_histogram(binwidth = .5, fill="white", color="black") +
+    geom_vline(xintercept = mean(data_simples$entropia), color = "darkorange") + 
+    geom_vline(xintercept = median(data_simples$entropia), color = "brown")
+```
+
+```{r}
+data_simples %>% 
+    ggplot(aes(x = num, y = contornos))  + 
+    labs(x = "Imagem", y = "Quantidade de Contornos") +
+    geom_point() +
+    geom_hline(yintercept = mean(data_simples$contornos), color = "darkorange") + 
+    geom_hline(yintercept = median(data_simples$contornos), color = "brown")
+```
+
+
+```{r}
+data_complexas = data %>% filter(rotulo == "complexa");
+
+data_complexas %>% 
+    ggplot(aes(x = entropia))  + 
+    labs(x = "Entropia de Shannon", y = "Frequência") +
+    geom_histogram(binwidth = .5, fill="white", color="black") +
+    geom_vline(xintercept = mean(data_complexas$entropia), color = "darkorange") + 
+    geom_vline(xintercept = median(data_complexas$entropia), color = "brown")
+```
+
+```{r}
+data_complexas %>% 
+    ggplot(aes(x = num, y = contornos))  + 
+    labs(x = "Imagem", y = "Quantidade de Contornos") +
+    geom_point() +
+    geom_hline(yintercept = mean(data_complexas$contornos), color = "darkorange") + 
+    geom_hline(yintercept = median(data_complexas$contornos), color = "brown")
+```
+
+
+```{r}
+data = data %>% mutate(rotulo = as.factor(rotulo))
+model = glm(rotulo ~ entropia, data = data, family = "binomial")
+
+tidy(model, conf.int = TRUE, exponentiate = TRUE)
+
+
+previsao_entropia = augment(model, 
+                                type.predict = "response") 
+
+previsao_entropia = previsao_entropia %>% mutate(previsao = ifelse(.fitted > .5, "simples", "complexa"))
+```
+
+```{r}
+acuracia = sum((previsao_entropia$rotulo == "simples" & previsao_entropia$previsao == "simples") | ((previsao_entropia$rotulo == 'complexa' & previsao_entropia$previsao == "complexa"))) / nrow(previsao_entropia)
+               
+acuracia
+```
+
+```{r}
+data = data %>% mutate(contornos_z = as.numeric(scale(contornos)));
+
+
+data = data %>% mutate(rotulo = as.factor(rotulo))
+model = glm(rotulo ~ contornos_z + entropia, data = data, family = "binomial")
+
+tidy(model, conf.int = TRUE, exponentiate = TRUE)
+
+
+previsao_contornos = augment(model, 
+                                type.predict = "response") 
+
+previsao_contornos = previsao_contornos %>% mutate(previsao = ifelse(.fitted > .5, "simples", "complexa"))
+```
+```{r}
+acuracia = sum((previsao_contornos$rotulo == "simples" & previsao_contornos$previsao == "simples") | ((previsao_contornos$rotulo == 'complexa' & previsao_contornos$previsao == "complexa"))) / nrow(previsao_contornos)
+               
+acuracia
+```
+
+

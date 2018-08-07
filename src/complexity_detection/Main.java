@@ -2,8 +2,10 @@ package complexity_detection;
 
 import java.awt.Graphics;
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -16,44 +18,102 @@ import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
 public class Main {
-	
+	public static final String FILE_HEADER = "nome, num, rotulo, contornos, entropia, qtd_cores";
 	
 	public static void main(String[] args) {
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-		Mat[] simple = new Mat[30];
-		Mat[] medium = new Mat[30];
-		Mat[] complex = new Mat[30];
 		
-		loadAllImages(simple, medium, complex);
+		Mat color = loadImage(ImgComplexity.MEDIUM, "11");
 		
-		Mat color = loadImage(ImgComplexity.SIMPLE, "11");
+		loadForExperiment();
 		
-		Mat gray = new Mat();
-		Mat draw = new Mat();
-		Mat wide = new Mat();
-		Mat newImg = new Mat(); 
+		System.out.println(color);
+	}
+	
+	public static void loadForExperiment() {
+		PrintWriter pw = null;
 		
-		Imgproc.cvtColor(color, newImg, Imgproc.CV_CONTOURS_MATCH_I3);
-		
-		Imgproc.cvtColor(color, gray, Imgproc.COLOR_BGR2GRAY);
-		Imgproc.Canny(gray,  wide,  50, 150, 3, false);
-		
-		wide.convertTo(draw, CvType.CV_8U);
-		
-		//if (Imgcodecs.imwrite("C:\\Users\\Wesley Silva\\git\\complexity-detection\\images\\complexas\\06NC3J622222.jpg", draw)) {
+		try {
+			pw = new PrintWriter(new File("data.csv"));
 			
-		//	System.out.println("edge is detected...");
-		//}
+			pw.append(FILE_HEADER + System.lineSeparator());
+			
+			for (int i = 0; i < 45; i++) {
+				int num = i + 1;
+				String numStr = "";
+				if (num < 10) {
+					numStr = "0" + (num);
+				} else {
+					numStr = num + "";
+				}
+				
+				Mat m = loadImage(ImgComplexity.SIMPLE, numStr );
+				
+				int countours = getCountours(m);
+				int colors = countColors(m);
+				double entropy = getEntropy(mat2Img(m), 256);
+				
+				pw.append("s_img_" + numStr + ",");
+				pw.append(String.valueOf(num) + ",");
+				pw.append("simples,");
+				pw.append(String.valueOf(countours) + ",");
+				pw.append(String.valueOf(entropy) + ",");
+				pw.append(String.valueOf(colors));
+				pw.append(System.lineSeparator());
+			}
+			
+			for (int i = 0; i < 45; i++) {
+				int num = i + 1;
+				String numStr = "";
+				if (num < 10) {
+					numStr = "0" + (num);
+				} else {
+					numStr = num + "";
+				}
+				
+				Mat m = loadImage(ImgComplexity.COMPLEX, numStr);
+				int countours = getCountours(m);
+				int colors = countColors(m);
+				double entropy = getEntropy(mat2Img(m), 256);
+				
+				pw.append("c_img_" + numStr + ",");
+				pw.append(String.valueOf(num) + ",");
+				pw.append("complexa,");
+				pw.append(String.valueOf(countours) + ",");
+				pw.append(String.valueOf(entropy) + ",");
+				pw.append(String.valueOf(colors));
+				pw.append(System.lineSeparator());
+			}
+			
+		} catch(FileNotFoundException e) {
+			e.printStackTrace();
+		} finally {
+				pw.flush();
+				pw.close();
+			
+		}
+	}
+			
+	public static int getCountours(Mat mat) {
+		Mat gray = new Mat();
 		
-		List<MatOfPoint> contours = new ArrayList<>();
-		Imgproc.findContours(draw, contours, new Mat(), Imgproc.RETR_TREE, Imgproc.CHAIN_APPROX_SIMPLE);
+		// Transforma imagem em cinza.
+		Imgproc.cvtColor(mat, gray, Imgproc.COLOR_BGR2GRAY);
 		
-		countColors(newImg);
-		System.out.println("Origin entropy = " + getEntropy(mat2Img(newImg), 256));
-		//System.out.println("Red entropy = " + getEntropy(getRed(mat2Img(newImg)), 256));
-		//System.out.println("Green entropy = " + getEntropy(getGreen(mat2Img(newImg)), 256));
-		//System.out.println("Blue entropy = " + getEntropy(getBlue(mat2Img(newImg)), 256));
-		System.out.println(contours.size());
+		Mat cannied = new Mat();
+		
+		// Calcula bordas
+		Imgproc.Canny(gray,  cannied,  50, 150, 3, false);
+		
+		Mat draw = new Mat();
+		
+		// Final image
+		cannied.convertTo(draw, CvType.CV_8U);
+		
+		List<MatOfPoint> countours = new ArrayList<>();
+		Imgproc.findContours(draw, countours, new Mat(), Imgproc.RETR_TREE, Imgproc.CHAIN_APPROX_SIMPLE);
+		
+		return countours.size();
 	}
 	
 	public static void loadAllImages(Mat[] simple, Mat[] medium, Mat[] complex) {
@@ -69,6 +129,33 @@ public class Main {
 			
 			simple[i] = loadImage(ImgComplexity.SIMPLE, numStr);
 		}
+		
+		for (int i = 0; i < simple.length; i++) {
+			int num = i + 1;
+			String numStr = "";
+			if (num < 10) {
+				numStr = "0" + (num);
+			} else {
+				numStr = num + "";
+			}
+				
+			
+			simple[i] = loadImage(ImgComplexity.MEDIUM, numStr);
+		}
+		
+		for (int i = 0; i < simple.length; i++) {
+			int num = i + 1;
+			String numStr = "";
+			if (num < 10) {
+				numStr = "0" + (num);
+			} else {
+				numStr = num + "";
+			}
+				
+			
+			simple[i] = loadImage(ImgComplexity.COMPLEX, numStr);
+		}
+		
 	}
 	
 	public static Mat loadImage(ImgComplexity complexity, String num) {
@@ -81,8 +168,7 @@ public class Main {
 			
 			return m;
 		} else if (complexity.equals(ImgComplexity.MEDIUM)) {
-			Mat m = Imgcodecs.imread("./images/medias/" + "m_img_" + num + "." + "jpg	");
-			
+			Mat m = Imgcodecs.imread("./images/medias/" + "m_img_" + num + "." + "jpg");
 			if (m.empty()) {
 				return Imgcodecs.imread("./images/medias/" + "m_img_" + num + "." + "png");
 			}
@@ -99,31 +185,25 @@ public class Main {
 		}
 	}
 	
-	public static void countColors(Mat draw) {
-
-				Mat m = draw;
-				  int size = (int)m.total();
-				  int nbChannels = m.channels();
-				  byte[] temp = new byte[size * nbChannels];
-				  m.get(0, 0, temp);
-				  Set<Integer> set =  new HashSet<Integer>();//will contain all different values
-				  for (int i = 0; i < size; i++)
-				  {
-				     int pixelVal = 0;
-				     for(int j=0; j<nbChannels; j++) {
-				        pixelVal+= (temp[i*nbChannels+j] << (8*j));
-				     }
-				     set.add(pixelVal);
-				 }
+	public static int countColors(Mat mat) {
+		int size = (int) mat.total();
+		int nbChannels = mat.channels();
+		byte[] temp = new byte[size * nbChannels];
+		mat.get(0, 0, temp);
+		Set<Integer> set =  new HashSet<Integer>();//will contain all different values
+		for (int i = 0; i < size; i++) {
+			int pixelVal = 0;
+			for(int j=0; j<nbChannels; j++) {
+				pixelVal+= (temp[i*nbChannels+j] << (8*j));
+			}
+			
+			set.add(pixelVal);
+		}
 				 
-				  
-				  
-				 System.out.println("Color number : " + set.size());
-
+		return set.size();
 	}
 	
-	public static BufferedImage mat2Img(Mat in)
-    {
+	private static BufferedImage mat2Img(Mat in) {
         BufferedImage out;
         byte[] data = new byte[320 * 240 * (int)in.elemSize()];
         int type;
@@ -166,67 +246,12 @@ public class Main {
 			  double entropyValue = 0,temp=0;
 			  double totalSize = image.getHeight() * image.getWidth(); //total size of all symbols in an image
 		 
-			  for(int i=0;i<maxValue;i++){ //the number of times a sybmol has occured
-			    if(bins[i]>0){ //log of zero goes to infinity
-			    	//System.out.println("ENTROU");
+			  for(int i=0;i<maxValue;i++){ 
+			    if(bins[i]>0){
 			        temp=(bins[i]/totalSize)*(Math.log(bins[i]/totalSize));
 			        entropyValue += temp;
 			      }
 			  }
 			return entropyValue*(-1);
 	  }
-	  
-	  public static BufferedImage getBlue(BufferedImage originalImage){
-	        int RGBPixel;
-	        int bluePixel;
-	                for (int i = 0 ; i <= originalImage.getWidth()-1 ; i++)
-	                    for (int j=0 ;j <= originalImage.getHeight()-1 ; j++){
-
-	                            RGBPixel = originalImage.getRGB(i,j);
-	                            bluePixel = RGBPixel & 0xff;
-
-	                            originalImage.setRGB(i, j, (bluePixel));
-	                    }
-	        return originalImage;
-	    }
-	    
-	//------------------------------------------------------------------------------------------   
-	   
-	    /* Process a image to obtain its red channel
-	    * @param BufferedImage originalImage - The image to be processed
-	    * @return BufferedImage originalImage - The red channel of the given image
-	    */
-	    public static BufferedImage getRed(BufferedImage originalImage){
-	        int RGBPixel;
-	        int redPixel;
-	                for (int i = 0 ; i <= originalImage.getWidth()-1 ; i++)
-	                    for (int j=0 ;j <= originalImage.getHeight()-1 ; j++){
-
-	                            RGBPixel = originalImage.getRGB(i,j);
-	                            redPixel = (RGBPixel>>16) & 0xff;
-
-	                            originalImage.setRGB(i, j, (redPixel << 16));
-	                    }
-	        return originalImage;
-	    }
-	    
-	 //------------------------------------------------------------------------------------------   
-	   
-	    /* Process a image to obtain its gren channel
-	    * @param BufferedImage originalImage - The image to be processed
-	    * @return BufferedImage originalImage - The green channel of the given image
-	    */
-	    public static BufferedImage getGreen(BufferedImage originalImage){
-	        int RGBPixel;
-	        int greenPixel;
-	                for (int i = 0 ; i <= originalImage.getWidth()-1 ; i++)
-	                    for (int j=0 ;j <= originalImage.getHeight()-1 ; j++){
-
-	                            RGBPixel = originalImage.getRGB(i,j);
-	                            greenPixel = (RGBPixel>>8) & 0xff;
-
-	                            originalImage.setRGB(i, j, (greenPixel << 8));
-	                    }
-	        return originalImage;
-	    }
 }
